@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>הזמנה לחתונה</title>
+  <style>
+    :root {
+      /* בסיס למכשירים שונים - חופה גדולה בהרבה ובגובה הנכון */
+      --base-font-size: clamp(12px, 2.5vw, 16px);
+      --hupa-width: clamp(650px, 85vw, 900px);
+      --hupa-top: clamp(55%, 60vh, 65%);
+      --characters-height: clamp(220px, 38vh, 380px);
+      --button-size: clamp(45px, 8vw, 70px);
+      --popup-width: clamp(380px, 88vw, 580px);
+      --popup-max-height: clamp(450px, 78vh, 750px);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      background-color: #fefefe;
+      overflow: hidden;
+      user-select: none;
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+    }
+
+    #backgroundImage {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      object-position: center;
+      z-index: 0;
+    }
+
+    /* החופה גדולה בהרבה - מיושרת עם הדמויות */
+    #hupa {
+      position: absolute;
+      bottom: 15%;
+      left: 48%;
+      transform: translateX(-50%);
+      width: var(--hupa-width);
+      z-index: 3;
+      max-width: 90vw;
+    }
+
+    /* אזור התחתון לדמויות - מוזז למעלה לרמת החופה */
+    .characters-area {
+      position: absolute;
+      bottom: 15%;
+      left: 0;
+      right: 0;
+      height: var(--characters-height);
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 5;
+    }
+
+    #groomImage,
+    #brideImage {
+      position: absolute;
+      bottom: 0;
+      transition: all 2.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      z-index: 10;
+    }
+
+    /* גובה החתן */
+    #groomImage {
+      height: var(--characters-height);
+      right: 15%;
+    }
+
+    /* הכלה קטנה יותר מהחתן */
+    #brideImage {
+      height: calc(var(--characters-height) * 0.85);
+      left: 15%;
+    }
+
+    /* כשהם נפגשים - עוצרים במרחק נוח מהכפתור */
+    .meeting-under-hupa #groomImage {
+      right: 44%;
+      transform: none;
+    }
+
+    .meeting-under-hupa #brideImage {
+      left: 44%;
+      transform: none;
+    }
+
+    /* כפתור הפתיחה - במרכז בין החתן והכלה */
+    #clickIndicator {
+      position: absolute;
+      bottom: clamp(15px, 5vh, 50px);
+      left: 50%;
+      transform: translateX(-50%);
+      width: var(--button-size);
+      height: var(--button-size);
+      background: linear-gradient(135deg, #ffb3d9, #ff80bf);
+      border: 3px solid #ff4da6;
+      border-radius: 50%;
+      cursor: pointer;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: #333;
+      font-size: var(--base-font-size);
+      box-shadow: 0 4px 20px rgba(255, 179, 217, 0.5);
+      animation: gentle-pulse 2.5s infinite;
+      transition: all 0.3s ease;
+    }
+
+    #clickIndicator:hover {
+      transform: translateX(-50%) scale(1.1);
+      box-shadow: 0 6px 25px rgba(255, 179, 217, 0.7);
+    }
+
+    @keyframes gentle-pulse {
+      0%, 100% { 
+        box-shadow: 0 4px 20px rgba(255, 179, 217, 0.5);
+        transform: translateX(-50%) scale(1);
+      }
+      50% { 
+        box-shadow: 0 6px 30px rgba(255, 179, 217, 0.8);
+        transform: translateX(-50%) scale(1.05);
+      }
+    }
+
+    /* חלון ההזמנה - גדול יותר ומוזז למעלה כדי שהכפתור לא יסתיר */
+    #invitePopup {
+      position: absolute;
+      top: 45%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      width: var(--popup-width);
+      max-height: var(--popup-max-height);
+      background: white;
+      box-shadow: 0 15px 50px rgba(0,0,0,0.25);
+      text-align: center;
+      border-radius: 20px;
+      padding: clamp(15px, 3vw, 25px);
+      transition: all 2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      z-index: 15;
+      overflow: auto;
+      opacity: 0;
+    }
+
+    #invitePopup.open {
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 1;
+    }
+
+    #invitePopup img {
+      width: 100%;
+      height: auto;
+      border-radius: 15px;
+      object-fit: contain;
+      max-height: calc(var(--popup-max-height) - 50px);
+    }
+
+    /* אפקט לבבות */
+    .hearts {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      pointer-events: none;
+      z-index: 12;
+    }
+
+    .heart {
+      position: absolute;
+      width: clamp(15px, 3vw, 25px);
+      height: clamp(15px, 3vw, 25px);
+      background: #ff80bf;
+      transform: rotate(45deg);
+      animation: float-heart 3.5s ease-out forwards;
+      opacity: 0;
+    }
+
+    .heart:before,
+    .heart:after {
+      content: '';
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      border-radius: 50%;
+      background: #ff80bf;
+    }
+
+    .heart:before {
+      left: -50%;
+      top: 0;
+    }
+
+    .heart:after {
+      left: 0;
+      top: -50%;
+    }
+
+    @keyframes float-heart {
+      0% {
+        opacity: 1;
+        transform: translateY(0) rotate(45deg) scale(0.3);
+      }
+      50% {
+        opacity: 0.9;
+        transform: translateY(-60px) rotate(45deg) scale(0.7);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(-120px) rotate(45deg) scale(1);
+      }
+    }
+
+    /* התאמות ספציפיות לטלפונים קטנים */
+    @media (max-width: 480px) {
+      :root {
+        --hupa-width: clamp(400px, 80vw, 500px);
+        --hupa-top: 30%;
+        --characters-height: clamp(180px, 42vh, 260px);
+        --button-size: clamp(40px, 10vw, 55px);
+        --popup-width: clamp(320px, 93vw, 420px);
+        --popup-max-height: clamp(400px, 75vh, 550px);
+      }
+
+      .meeting-under-hupa #groomImage {
+        right: 43%;
+      }
+
+      .meeting-under-hupa #brideImage {
+        left: 43%;
+      }
+
+      #groomImage {
+        right: 10%;
+      }
+
+      #brideImage {
+        left: 10%;
+      }
+
+      #invitePopup {
+        top: 42%;
+      }
+    }
+
+    /* התאמות לטלפונים גדולים */
+    @media (min-width: 481px) and (max-width: 768px) {
+      :root {
+        --hupa-width: clamp(500px, 82vw, 650px);
+        --hupa-top: 25%;
+        --characters-height: clamp(220px, 40vh, 320px);
+        --button-size: clamp(50px, 8vw, 65px);
+        --popup-width: clamp(400px, 90vw, 500px);
+        --popup-max-height: clamp(450px, 78vh, 600px);
+      }
+
+      .meeting-under-hupa #groomImage {
+        right: 43.5%;
+      }
+
+      .meeting-under-hupa #brideImage {
+        left: 43.5%;
+      }
+    }
+
+    /* התאמות לטבלטים */
+    @media (min-width: 769px) and (max-width: 1024px) {
+      :root {
+        --hupa-width: clamp(600px, 85vw, 750px);
+        --hupa-top: 20%;
+        --characters-height: clamp(260px, 38vh, 350px);
+        --button-size: clamp(55px, 6vw, 70px);
+        --popup-width: clamp(450px, 80vw, 580px);
+        --popup-max-height: clamp(500px, 80vh, 650px);
+      }
+
+      .meeting-under-hupa #groomImage {
+        right: 43%;
+      }
+
+      .meeting-under-hupa #brideImage {
+        left: 43%;
+      }
+    }
+
+    /* התאמות למחשבים ניידים */
+    @media (min-width: 1025px) and (max-width: 1440px) {
+      :root {
+        --hupa-width: clamp(180px, 25vw, 260px);
+        --hupa-top: 37%;
+        --characters-height: clamp(300px, 42vh, 420px);
+        --button-size: clamp(60px, 5vw, 75px);
+        --popup-width: clamp(500px, 70vw, 650px);
+        --popup-max-height: clamp(550px, 82vh, 700px);
+      }
+
+      .meeting-under-hupa #groomImage {
+        right: 42.5%;
+      }
+
+      .meeting-under-hupa #brideImage {
+        left: 42.5%;
+      }
+    }
+
+    /* התאמות למסכים גדולים */
+    @media (min-width: 1441px) {
+      :root {
+        --hupa-width: clamp(200px, 22vw, 280px);
+        --hupa-top: 40%;
+        --characters-height: clamp(350px, 48vh, 480px);
+        --button-size: clamp(65px, 4vw, 80px);
+        --popup-width: clamp(550px, 60vw, 700px);
+        --popup-max-height: clamp(600px, 85vh, 800px);
+      }
+
+      .meeting-under-hupa #groomImage {
+        right: 42%;
+      }
+
+      .meeting-under-hupa #brideImage {
+        left: 42%;
+      }
+    }
+
+    /* התאמה למסכים רחבים מאוד */
+    @media (min-width: 1920px) {
+      :root {
+        --hupa-width: 300px;
+        --hupa-top: 42%;
+        --characters-height: 500px;
+        --button-size: 85px;
+        --popup-width: 750px;
+        --popup-max-height: 850px;
+      }
+
+      .meeting-under-hupa #groomImage {
+        right: 41.5%;
+      }
+
+      .meeting-under-hupa #brideImage {
+        left: 41.5%;
+      }
+    }
+
+    /* התאמה למסכים עם יחס גובה-רוחב מיוחד */
+    @media (orientation: landscape) and (max-height: 600px) {
+      :root {
+        --hupa-top: 25%;
+        --characters-height: clamp(150px, 60vh, 250px);
+        --popup-max-height: clamp(300px, 85vh, 500px);
+      }
+    }
+
+    @media (orientation: portrait) and (min-aspect-ratio: 1/2) {
+      :root {
+        --hupa-top: 30%;
+        --characters-height: clamp(200px, 30vh, 300px);
+      }
+    }
+
+    /* אנטי-אליאסינג ושיפור ביצועים */
+    #groomImage, #brideImage, #hupa {
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: crisp-edges;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+  </style>
+</head>
+<body>
+  <div id="container" class="initial-position">
+    <img id="backgroundImage" src="TY.png" alt="רקע TY">
+    
+    <div class="characters-area">
+      <img id="groomImage" src="חתן.png" alt="חתן">
+      <img id="brideImage" src="bride.png" alt="כלה">
+    </div>
+    
+    <div id="clickIndicator" onclick="startWeddingAnimation()">לפתיחה</div>
+    <div id="invitePopup">
+      <img src="invitation.png" alt="הזמנה לחתונה">
+    </div>
+    <div class="hearts" id="hearts"></div>
+  </div>
+  
+  <script>
+    let isAnimating = false;
+    let isOpen = false;
+
+    function createHeart() {
+      const heart = document.createElement('div');
+      heart.className = 'heart';
+      
+      // מיקום אקראי סביב נקודת המפגש
+      const randomX = (Math.random() - 0.5) * 80;
+      const randomY = (Math.random() - 0.5) * 40;
+      
+      heart.style.left = randomX + 'px';
+      heart.style.top = randomY + 'px';
+      
+      document.getElementById('hearts').appendChild(heart);
+      
+      // הסרת הלב אחרי האנימציה
+      setTimeout(() => {
+        if (heart.parentNode) {
+          heart.parentNode.removeChild(heart);
+        }
+      }, 3500);
+    }
+
+    function startWeddingAnimation() {
+      if (isAnimating) return;
+      
+      const container = document.getElementById('container');
+      const invite = document.getElementById('invitePopup');
+      const btn = document.getElementById('clickIndicator');
+      
+      if (isOpen) {
+        // סגירה
+        isAnimating = true;
+        invite.classList.remove('open');
+        
+        setTimeout(() => {
+          container.classList.remove('meeting-under-hupa');
+          container.classList.add('initial-position');
+          btn.innerText = 'לפתיחה';
+          isOpen = false;
+          isAnimating = false;
+        }, 600);
+        
+      } else {
+        // פתיחה
+        isAnimating = true;
+        btn.innerText = 'רגע...';
+        
+        // שלב 1: הזוג מתקרב פנים מול פנים
+        container.classList.remove('initial-position');
+        container.classList.add('meeting-under-hupa');
+        
+        // שלב 2: לבבות מעופפים
+        setTimeout(() => {
+          for (let i = 0; i < 10; i++) {
+            setTimeout(() => createHeart(), i * 150);
+          }
+        }, 1800);
+        
+        // שלב 3: הופעת ההזמנה הגדולה
+        setTimeout(() => {
+          invite.classList.add('open');
+          btn.innerText = 'לסגירה';
+          isOpen = true;
+          isAnimating = false;
+        }, 2800);
+      }
+    }
+
+    // זיהוי סוג המכשיר ואופטימיזציה
+    function optimizeForDevice() {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const pixelRatio = window.devicePixelRatio || 1;
+      
+      // הוספת קלאסים לזיהוי סוג המכשיר
+      document.body.classList.remove('mobile-small', 'mobile-large', 'tablet', 'laptop', 'desktop', 'high-dpi');
+      
+      if (width <= 480) {
+        document.body.classList.add('mobile-small');
+      } else if (width <= 768) {
+        document.body.classList.add('mobile-large');
+      } else if (width <= 1024) {
+        document.body.classList.add('tablet');
+      } else if (width <= 1440) {
+        document.body.classList.add('laptop');
+      } else {
+        document.body.classList.add('desktop');
+      }
+      
+      if (pixelRatio > 1.5) {
+        document.body.classList.add('high-dpi');
+      }
+    }
+
+    // מניעת זום ולחיצה כפולה
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', function (event) {
+      const now = Date.now();
+      if (now - lastTouchEnd <= 300) {
+        event.preventDefault();
+      }
+      lastTouchEnd = now;
+    }, { passive: false });
+
+    // מניעת right-click
+    document.addEventListener('contextmenu', function(e) {
+      e.preventDefault();
+    });
+
+    // טעינה ואירועים
+    document.addEventListener('DOMContentLoaded', optimizeForDevice);
+    window.addEventListener('resize', optimizeForDevice);
+    window.addEventListener('orientationchange', () => {
+      setTimeout(optimizeForDevice, 500);
+    });
+
+    // אופטימיזציה לביצועים
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(optimizeForDevice);
+    }
+  </script>
+</body>
+</html>
